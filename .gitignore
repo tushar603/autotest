@@ -1,0 +1,9 @@
+# Security
+backend/.env
+
+# Python Virtual Environment
+backend/venv/
+backend/__pycache__/
+
+# Node Modules
+frontend/node_modules/
