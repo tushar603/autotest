@@ -19,7 +19,7 @@ function App() {
 
     try {
       // Send the PRD to your FastAPI backend
-      const response = await axios.post('https://autotest-9n29.onrender.com/', {
+      const response = await axios.post('https://autotest-9n29.onrender.com/api/generate', {
         text: prdText
       });
 
