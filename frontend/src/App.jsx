@@ -14,9 +14,14 @@ function App() {
   const [generatingFlow, setGeneratingFlow] = useState(false);
   const [flowchartText, setFlowchartText] = useState(null);
   const [error, setError] = useState(null);
+  const [history, setHistory] = useState([]);
 
   useEffect(() => {
     mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    const saved = localStorage.getItem('testforge_history');
+    if (saved) {
+      setHistory(JSON.parse(saved));
+    }
   }, []);
 
   useEffect(() => {
@@ -53,11 +58,8 @@ function App() {
       const response = await axios.post('https://autotest-9n29.onrender.com/api/flow', {
         text: prdText
       });
-
-      console.log("[TestForge] AI Flow Data:", response.data); // Helpful for debugging in browser console
-
+      console.log("[TestForge] AI Flow Data:", response.data); 
       const data = response.data;
-      // Defensive fallback: If nodes/edges are missing, default to an empty array
       const nodes = data.nodes || [];
       const edges = data.edges || [];
 
@@ -70,7 +72,6 @@ function App() {
       let safeMermaid = 'graph TD\n';
       
       nodes.forEach(node => {
-        // Strip out any characters that aren't letters, numbers, or spaces
         const cleanLabel = (node.label || "Step").replace(/[^a-zA-Z0-9 ]/g, '');
         safeMermaid += `${node.id}["${cleanLabel}"]\n`;
       });
@@ -89,6 +90,28 @@ function App() {
     }
   };
 
+  const saveToHistory = (text, matrix) => {
+    const newItem = {
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      snippet: text.substring(0, 40) + '...',
+      fullPrd: text,
+      matrixData: matrix
+    };
+    const updated = [newItem, ...history].slice(0, 5);
+    setHistory(updated);
+    localStorage.setItem('testforge_history', JSON.stringify(updated));
+  };
+
+  const loadHistoryItem = (item) => {
+    setPrdText(item.fullPrd);
+    setResults(item.matrixData);
+    setScoreData(null);
+    setFlowchartText(null);
+    setError(null);
+    setProvider("Local Cache");
+  };
+
   const handleGenerate = async () => {
     if (!prdText.trim()) return;
     setLoading(true);
@@ -102,6 +125,7 @@ function App() {
       });
       setResults(response.data.data);
       setProvider(response.data.provider);
+      saveToHistory(prdText, response.data.data);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to connect to TestForge Engine.");
     } finally {
@@ -169,7 +193,7 @@ function App() {
 
         <Row className="g-4">
           <Col lg={4}>
-            <Card className="shadow-sm border-0 h-100">
+            <Card className="shadow-sm border-0 h-100 mb-4">
               <Card.Header className="bg-white border-0 pt-4 pb-0">
                 <h5 className="fw-bold mb-0">1. Input Requirements</h5>
               </Card.Header>
@@ -222,6 +246,27 @@ function App() {
                 {error && <div className="text-danger mt-3 small fw-bold">{error}</div>}
               </Card.Body>
             </Card>
+
+            {history.length > 0 && (
+              <Card className="shadow-sm border-0">
+                <Card.Header className="bg-white border-0 pt-4 pb-0">
+                  <h5 className="fw-bold mb-0">Recent Projects</h5>
+                </Card.Header>
+                <Card.Body>
+                  <ListGroup variant="flush">
+                    {history.map((item) => (
+                      <ListGroup.Item action key={item.id} onClick={() => loadHistoryItem(item)} className="px-0 border-bottom">
+                        <div className="d-flex w-100 justify-content-between">
+                          <small className="fw-bold text-primary">Test Run</small>
+                          <small className="text-muted">{item.date}</small>
+                        </div>
+                        <p className="mb-0 small text-truncate">{item.snippet}</p>
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                </Card.Body>
+              </Card>
+            )}
           </Col>
 
           <Col lg={8}>
