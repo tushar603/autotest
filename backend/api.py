@@ -192,8 +192,8 @@ async def generate_flow(request: PRDRequest):
     1. Start strictly with 'graph TD'.
     2. Node IDs must be simple letters (e.g., A, B, C).
     3. Node labels MUST be enclosed in brackets and double quotes (e.g., A["User Logs In"] --> B["Dashboard"]).
-    4. Do NOT use parentheses () or single quotes inside the labels.
-    5. Return STRICTLY the raw Mermaid syntax. Do NOT wrap the output in markdown blocks (no ```mermaid).
+    4. Return STRICTLY the raw Mermaid syntax. Do NOT wrap the output in markdown blocks.
+    5. DO NOT include any conversational text.
     
     PRD: {request.text}
     """
@@ -205,9 +205,12 @@ async def generate_flow(request: PRDRequest):
             max_tokens=1000
         )
         raw_syntax = response.choices[0].message.content
-        # Double-check strip to remove any rogue markdown formatting
+        
         clean_syntax = raw_syntax.replace("```mermaid", "").replace("```", "").strip()
         
+        if "graph TD" in clean_syntax:
+            clean_syntax = clean_syntax[clean_syntax.find("graph TD"):]
+            
         return {"flowchart": clean_syntax}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
