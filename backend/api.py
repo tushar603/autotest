@@ -76,11 +76,11 @@ async def score_prd(request: PRDRequest):
     prompt = f"""Perform static analysis on the following PRD. 
     Identify vague requirements, unquantified metrics, and missing edge conditions.
     Return strictly a JSON object. Do not include markdown formatting.
-    Schema:
+    Example Schema:
     {{
-        "readiness_score": <integer 0-100>,
+        "readiness_score": 45,
         "vague_statements": [
-            {{"statement": "<exact_string_match>", "issue": "<technical_defect_description>"}}
+            {{"statement": "The system should be fast", "issue": "Unquantified metric. Define exact response time in seconds."}}
         ]
     }}
     PRD: {request.text}
@@ -90,12 +90,12 @@ async def score_prd(request: PRDRequest):
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.1-8b-instant",
             temperature=0.1,
+            response_format={"type": "json_object"} 
         )
         data_string = response.choices[0].message.content
-        clean_string = data_string.replace("```json", "").replace("```", "").strip()
-        return json.loads(clean_string)
+        return json.loads(data_string)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"AI Parsing Error: {str(e)}")
 
 @app.post("/api/generate")
 async def process_prd(request: PRDRequest):
