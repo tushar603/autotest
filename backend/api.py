@@ -36,6 +36,9 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 class PRDRequest(BaseModel):
     text: str
 
+class CodeGenerationRequest(BaseModel):
+    test_data: list
+
 def clean_json_response(raw_text: str):
     cleaned = raw_text.replace("```json", "").replace("```", "").strip()
     return json.loads(cleaned)
@@ -144,3 +147,34 @@ async def process_prd(request: PRDRequest):
         return {"status": "success", "provider": "Demo Mode Cache", "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Catastrophic Failure across all tiers.")
+    
+
+@app.post("/api/generate-code")
+async def generate_automation_code(request: CodeGenerationRequest):
+    prompt = f"""
+    You are a Senior QA Automation Engineer in Test (SDET).
+    I am providing you with a JSON array of QA test cases. 
+    Write a single, highly professional Python script using `pytest` and `selenium` (WebDriver) that implements these tests.
+    
+    CRITICAL INSTRUCTIONS:
+    - Return STRICTLY the raw Python code. 
+    - Do NOT wrap the code in markdown blocks (e.g., no ```python).
+    - Do NOT include any explanations or conversational text.
+    - Include standard boilerplate (imports, webdriver setup in a pytest fixture).
+
+    Test Cases:
+    {json.dumps(request.test_data)}
+    """
+    try:
+        response = groq_client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.1-8b-instant",
+            temperature=0.1,
+        )
+        # Clean any accidental markdown formatting just in case
+        raw_code = response.choices[0].message.content
+        clean_code = raw_code.replace("```python", "").replace("```", "").strip()
+        
+        return {"code": clean_code}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
