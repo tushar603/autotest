@@ -181,3 +181,32 @@ async def generate_automation_code(request: CodeGenerationRequest):
         return {"code": clean_code}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/api/flow")
+async def generate_flow(request: PRDRequest):
+    prompt = f"""
+    Analyze this PRD and extract the core user journey or system architecture flow.
+    Generate a visual dependency graph using STRICT Mermaid.js syntax.
+    Start with 'graph TD'.
+    Use concise node names.
+    
+    CRITICAL INSTRUCTIONS:
+    - Return STRICTLY the raw Mermaid syntax.
+    - Do NOT wrap the output in markdown blocks.
+    - Do NOT include any conversational text.
+    
+    PRD: {request.text}
+    """
+    try:
+        response = groq_client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.1-8b-instant",
+            temperature=0.1,
+            max_tokens=1000
+        )
+        raw_syntax = response.choices[0].message.content
+        clean_syntax = raw_syntax.replace("```mermaid", "").replace("```", "").strip()
+        
+        return {"flowchart": clean_syntax}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
