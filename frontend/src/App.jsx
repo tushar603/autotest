@@ -53,9 +53,23 @@ function App() {
       const response = await axios.post('https://autotest-9n29.onrender.com/api/flow', {
         text: prdText
       });
-      setFlowchartText(response.data.flowchart);
+
+      const data = response.data;
+      let safeMermaid = 'graph TD\n';
+      
+      data.nodes.forEach(node => {
+        const cleanLabel = node.label.replace(/[^a-zA-Z0-9 ]/g, '');
+        safeMermaid += `${node.id}["${cleanLabel}"]\n`;
+      });
+      
+      data.edges.forEach(edge => {
+        const cleanEdgeLabel = edge.label ? `|${edge.label.replace(/[^a-zA-Z0-9 ]/g, '')}|` : '';
+        safeMermaid += `${edge.from} -->${cleanEdgeLabel} ${edge.to}\n`;
+      });
+
+      setFlowchartText(safeMermaid);
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to generate system flow.");
+      setError("Failed to generate system flow.");
     } finally {
       setGeneratingFlow(false);
     }

@@ -185,16 +185,18 @@ async def generate_automation_code(request: CodeGenerationRequest):
 @app.post("/api/flow")
 async def generate_flow(request: PRDRequest):
     prompt = f"""
-    Analyze this PRD and extract the core user journey or system architecture flow.
-    Generate a visual dependency graph using STRICT Mermaid.js syntax.
-    
-    CRITICAL MERMAID INSTRUCTIONS:
-    1. Start strictly with 'graph TD'.
-    2. Node IDs must be simple letters (e.g., A, B, C).
-    3. Node labels MUST be enclosed in brackets and double quotes (e.g., A["User Logs In"] --> B["Dashboard"]).
-    4. Return STRICTLY the raw Mermaid syntax. Do NOT wrap the output in markdown blocks.
-    5. DO NOT include any conversational text.
-    
+    Analyze this PRD and extract the core system architecture flow.
+    Return STRICTLY a JSON object representing the flow.
+    Schema:
+    {{
+        "nodes": [
+            {{"id": "A", "label": "User Login"}},
+            {{"id": "B", "label": "Profile Dashboard"}}
+        ],
+        "edges": [
+            {{"from": "A", "to": "B", "label": "Success"}}
+        ]
+    }}
     PRD: {request.text}
     """
     try:
@@ -202,15 +204,8 @@ async def generate_flow(request: PRDRequest):
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.1-8b-instant",
             temperature=0.1,
-            max_tokens=1000
+            response_format={"type": "json_object"}
         )
-        raw_syntax = response.choices[0].message.content
-        
-        clean_syntax = raw_syntax.replace("```mermaid", "").replace("```", "").strip()
-        
-        if "graph TD" in clean_syntax:
-            clean_syntax = clean_syntax[clean_syntax.find("graph TD"):]
-            
-        return {"flowchart": clean_syntax}
+        return json.loads(response.choices[0].message.content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
