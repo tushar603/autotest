@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Card, Spinner, Badge, Table, ListGroup } from 'react-bootstrap';
+import mermaid from 'mermaid';
 
 function App() {
   const [prdText, setPrdText] = useState('');
@@ -9,8 +10,20 @@ function App() {
   const [provider, setProvider] = useState(null);
   const [scoring, setScoring] = useState(false);
   const [scoreData, setScoreData] = useState(null);
-  const [error, setError] = useState(null);
   const [generatingCode, setGeneratingCode] = useState(false);
+  const [generatingFlow, setGeneratingFlow] = useState(false);
+  const [flowchartText, setFlowchartText] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  }, []);
+
+  useEffect(() => {
+    if (flowchartText) {
+      mermaid.contentLoaded();
+    }
+  }, [flowchartText]);
 
   const handleScore = async () => {
     if (!prdText.trim()) return;
@@ -27,6 +40,24 @@ function App() {
       setError(err.response?.data?.detail || "Failed to analyze PRD Readiness.");
     } finally {
       setScoring(false);
+    }
+  };
+
+  const handleGenerateFlow = async () => {
+    if (!prdText.trim()) return;
+    setGeneratingFlow(true);
+    setError(null);
+    setFlowchartText(null);
+
+    try {
+      const response = await axios.post('https://autotest-9n29.onrender.com/api/flow', {
+        text: prdText
+      });
+      setFlowchartText(response.data.flowchart);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to generate system flow.");
+    } finally {
+      setGeneratingFlow(false);
     }
   };
 
@@ -131,7 +162,7 @@ function App() {
                   variant="outline-dark" 
                   className="w-100 py-2 fw-bold mb-2" 
                   onClick={handleScore} 
-                  disabled={scoring || loading || !prdText}
+                  disabled={scoring || loading || generatingFlow || !prdText}
                 >
                   {scoring ? (
                     <><Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/> Analyzing Ambiguity...</>
@@ -139,10 +170,21 @@ function App() {
                 </Button>
 
                 <Button 
+                  variant="outline-primary" 
+                  className="w-100 py-2 fw-bold mb-2" 
+                  onClick={handleGenerateFlow} 
+                  disabled={scoring || loading || generatingFlow || !prdText}
+                >
+                  {generatingFlow ? (
+                    <><Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/> Mapping Dependencies...</>
+                  ) : "Map Visual Architecture"}
+                </Button>
+
+                <Button 
                   variant="primary" 
                   className="w-100 py-2 fw-bold" 
                   onClick={handleGenerate} 
-                  disabled={loading || scoring || !prdText}
+                  disabled={loading || scoring || generatingFlow || !prdText}
                 >
                   {loading ? (
                     <><Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/> Orchestrating Models...</>
@@ -184,6 +226,17 @@ function App() {
                       <i className="bi bi-check-circle-fill me-2"></i> Excellent! No major ambiguities detected. Ready for test generation.
                     </div>
                   )}
+                </Card.Body>
+              </Card>
+            )}
+
+            {flowchartText && (
+              <Card className="shadow-sm border-0 mb-4 bg-white">
+                <Card.Header className="bg-white border-bottom-0 pt-4 pb-2">
+                  <h5 className="fw-bold mb-0">Visual Dependency Map</h5>
+                </Card.Header>
+                <Card.Body className="d-flex justify-content-center overflow-auto">
+                  <div className="mermaid">{flowchartText}</div>
                 </Card.Body>
               </Card>
             )}
