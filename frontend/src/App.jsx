@@ -54,22 +54,36 @@ function App() {
         text: prdText
       });
 
+      console.log("[TestForge] AI Flow Data:", response.data); // Helpful for debugging in browser console
+
       const data = response.data;
+      // Defensive fallback: If nodes/edges are missing, default to an empty array
+      const nodes = data.nodes || [];
+      const edges = data.edges || [];
+
+      if (nodes.length === 0) {
+        setError("AI failed to extract flowchart nodes. Please try generating again.");
+        setGeneratingFlow(false);
+        return;
+      }
+
       let safeMermaid = 'graph TD\n';
       
-      data.nodes.forEach(node => {
-        const cleanLabel = node.label.replace(/[^a-zA-Z0-9 ]/g, '');
+      nodes.forEach(node => {
+        // Strip out any characters that aren't letters, numbers, or spaces
+        const cleanLabel = (node.label || "Step").replace(/[^a-zA-Z0-9 ]/g, '');
         safeMermaid += `${node.id}["${cleanLabel}"]\n`;
       });
       
-      data.edges.forEach(edge => {
+      edges.forEach(edge => {
         const cleanEdgeLabel = edge.label ? `|${edge.label.replace(/[^a-zA-Z0-9 ]/g, '')}|` : '';
         safeMermaid += `${edge.from} -->${cleanEdgeLabel} ${edge.to}\n`;
       });
 
       setFlowchartText(safeMermaid);
     } catch (err) {
-      setError("Failed to generate system flow.");
+      console.error("[TestForge] Flow Error:", err);
+      setError("Failed to parse system flow data.");
     } finally {
       setGeneratingFlow(false);
     }
