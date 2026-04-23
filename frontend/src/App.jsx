@@ -1,28 +1,52 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Form, Button, Card, Spinner, Badge, Table } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Card, Spinner, Badge, Table, ProgressBar, ListGroup } from 'react-bootstrap';
 
 function App() {
   const [prdText, setPrdText] = useState('');
+  
+  // States for Generating Tests
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [provider, setProvider] = useState(null);
+  
+  // States for USP 3: Ambiguity Scoring
+  const [scoring, setScoring] = useState(false);
+  const [scoreData, setScoreData] = useState(null);
+  
   const [error, setError] = useState(null);
 
+  // --- USP 3: SHIFT-LEFT SCORING FUNCTION ---
+  const handleScore = async () => {
+    if (!prdText.trim()) return;
+    setScoring(true);
+    setError(null);
+    setScoreData(null);
+
+    try {
+      const response = await axios.post('https://autotest-9n29.onrender.com/api/score', {
+        text: prdText
+      });
+      setScoreData(response.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to analyze PRD Readiness.");
+    } finally {
+      setScoring(false);
+    }
+  };
+
+  // --- GENERATE TEST SUITE FUNCTION ---
   const handleGenerate = async () => {
     if (!prdText.trim()) return;
-    
     setLoading(true);
     setError(null);
     setResults(null);
     setProvider(null);
 
     try {
-      // Send the PRD to your FastAPI backend
       const response = await axios.post('https://autotest-9n29.onrender.com/api/generate', {
         text: prdText
       });
-
       setResults(response.data.data);
       setProvider(response.data.provider);
     } catch (err) {
@@ -34,18 +58,16 @@ function App() {
 
   const downloadCSV = () => {
     if (!results) return;
-    
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Requirement ID,Test Type,Title,Steps,Expected Result\n";
+    csvContent += "Requirement ID,Test Type,Title,Steps,Input Data,Expected Result\n";
 
     results.forEach(req => {
       req.testcases.forEach(tc => {
-        // Escape quotes and commas for CSV format
         const title = `"${tc.title.replace(/"/g, '""')}"`;
-        const steps = `"${tc.steps.join(' | ').replace(/"/g, '""')}"`;
+        const steps = `"${(tc.steps || []).join(' | ').replace(/"/g, '""')}"`;
+        const testInput = `"${(tc.test_input || 'N/A').replace(/"/g, '""')}"`; 
         const expected = `"${tc.expected_result.replace(/"/g, '""')}"`;
-        
-        csvContent += `${req.requirement_id},${tc.type},${title},${steps},${expected}\n`;
+        csvContent += `${req.requirement_id},${tc.type},${title},${steps},${testInput},${expected}\n`;
       });
     });
 
@@ -88,11 +110,25 @@ function App() {
                     style={{ resize: 'none' }}
                   />
                 </Form.Group>
+                
+                {/* USP 3 Button: Analyze PRD */}
+                <Button 
+                  variant="outline-dark" 
+                  className="w-100 py-2 fw-bold mb-2" 
+                  onClick={handleScore} 
+                  disabled={scoring || loading || !prdText}
+                >
+                  {scoring ? (
+                    <><Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/> Analyzing Ambiguity...</>
+                  ) : "Analyze PRD Readiness (Shift-Left)"}
+                </Button>
+
+                {/* Generate Button */}
                 <Button 
                   variant="primary" 
                   className="w-100 py-2 fw-bold" 
                   onClick={handleGenerate} 
-                  disabled={loading || !prdText}
+                  disabled={loading || scoring || !prdText}
                 >
                   {loading ? (
                     <><Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/> Orchestrating Models...</>
@@ -104,9 +140,45 @@ function App() {
             </Card>
           </Col>
 
-          {/* Right Column: Output & Dashboard */}
+          {/* Right Column: Output Dashboard */}
           <Col lg={8}>
-            <Card className="shadow-sm border-0 h-100 bg-white">
+            
+            {/* NEW: USP 3 Readiness Report Card */}
+            {scoreData && (
+              <Card className="shadow-sm border-0 mb-4 border-start border-4 border-info">
+                <Card.Body>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h5 className="fw-bold mb-0 text-info">PRD Readiness Report</h5>
+                    <h2>
+                      <Badge bg={scoreData.readiness_score > 80 ? 'success' : scoreData.readiness_score > 50 ? 'warning' : 'danger'}>
+                        {scoreData.readiness_score} / 100
+                      </Badge>
+                    </h2>
+                  </div>
+                  
+                  {scoreData.vague_statements && scoreData.vague_statements.length > 0 ? (
+                    <>
+                      <h6 className="fw-bold text-danger mt-3"><i className="bi bi-exclamation-triangle-fill"></i> Ambiguity Detected:</h6>
+                      <ListGroup variant="flush">
+                        {scoreData.vague_statements.map((issue, idx) => (
+                          <ListGroup.Item key={idx} className="bg-light mb-2 rounded border">
+                            <strong>Statement:</strong> <code>"{issue.statement}"</code> <br/>
+                            <span className="text-danger small fw-bold">Issue:</span> <span className="small text-muted">{issue.issue}</span>
+                          </ListGroup.Item>
+                        ))}
+                      </ListGroup>
+                    </>
+                  ) : (
+                    <div className="alert alert-success py-2 mb-0">
+                      <i className="bi bi-check-circle-fill me-2"></i> Excellent! No major ambiguities detected. Ready for test generation.
+                    </div>
+                  )}
+                </Card.Body>
+              </Card>
+            )}
+
+            {/* Traceability Matrix Card */}
+            <Card className="shadow-sm border-0 bg-white" style={{ minHeight: '400px' }}>
               <Card.Header className="bg-white border-bottom-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
                 <h5 className="fw-bold mb-0">2. Traceability Matrix</h5>
                 {provider && (
@@ -145,6 +217,7 @@ function App() {
                             <th>Req ID</th>
                             <th>Type</th>
                             <th>Test Title</th>
+                            <th>Input Data</th>
                             <th>Expected Result</th>
                           </tr>
                         </thead>
@@ -155,13 +228,18 @@ function App() {
                                 <td><Badge bg="secondary">{req.requirement_id}</Badge></td>
                                 <td>
                                   <Badge bg={
-                                    tc.type === 'functional' ? 'primary' : 
-                                    tc.type === 'negative' ? 'danger' : 'warning'
+                                    tc.type.toLowerCase() === 'functional' ? 'primary' : 
+                                    tc.type.toLowerCase() === 'negative' ? 'danger' : 'warning'
                                   }>
                                     {tc.type.toUpperCase()}
                                   </Badge>
                                 </td>
                                 <td className="fw-semibold">{tc.title}</td>
+                                <td>
+                                  <code className="text-dark bg-light px-2 py-1 rounded border">
+                                    {tc.test_input || 'N/A'}
+                                  </code>
+                                </td>
                                 <td className="text-muted small">{tc.expected_result}</td>
                               </tr>
                             ))
