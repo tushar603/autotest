@@ -158,10 +158,11 @@ async def generate_automation_code(request: CodeGenerationRequest):
     
     CRITICAL INSTRUCTIONS:
     - Return STRICTLY the raw Python code. 
-    - Do NOT wrap the code in markdown blocks (e.g., no ```python).
-    - Do NOT include any explanations or conversational text.
-    - KEEP IT DRY: Put the WebDriver setup AND the generic login steps inside the `@pytest.fixture` so you do not repeat login code in every test.
-    - Keep test functions concise and focused only on the specific requirement.
+    - Do NOT wrap the code in markdown blocks.
+    - Do NOT include any comments in the code.
+    - Do NOT append the raw JSON string to the file.
+    - Do NOT write a custom execution loop or use globals(). Rely entirely on native Pytest discovery (functions starting with test_).
+    - KEEP IT DRY: Put the WebDriver setup and generic login steps inside the `@pytest.fixture`.
 
     Test Cases:
     {json.dumps(request.test_data)}
