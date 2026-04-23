@@ -1,22 +1,17 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Form, Button, Card, Spinner, Badge, Table, ProgressBar, ListGroup } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Card, Spinner, Badge, Table, ListGroup } from 'react-bootstrap';
 
 function App() {
   const [prdText, setPrdText] = useState('');
-  
-  // States for Generating Tests
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [provider, setProvider] = useState(null);
-  
-  // States for USP 3: Ambiguity Scoring
   const [scoring, setScoring] = useState(false);
   const [scoreData, setScoreData] = useState(null);
-  
   const [error, setError] = useState(null);
+  const [generatingCode, setGeneratingCode] = useState(false);
 
-  // --- USP 3: SHIFT-LEFT SCORING FUNCTION ---
   const handleScore = async () => {
     if (!prdText.trim()) return;
     setScoring(true);
@@ -35,7 +30,6 @@ function App() {
     }
   };
 
-  // --- GENERATE TEST SUITE FUNCTION ---
   const handleGenerate = async () => {
     if (!prdText.trim()) return;
     setLoading(true);
@@ -80,10 +74,33 @@ function App() {
     document.body.removeChild(link);
   };
 
+  const downloadPythonScript = async () => {
+    if (!results) return;
+    setGeneratingCode(true);
+    setError(null);
+
+    try {
+      const response = await axios.post('https://autotest-9n29.onrender.com/api/generate-code', {
+        test_data: results
+      });
+      
+      const blob = new Blob([response.data.code], { type: 'text/x-python' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = 'testforge_automation.py';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to generate Selenium script.");
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
   return (
     <div className="bg-light min-vh-100 py-5">
       <Container>
-        {/* Header Section */}
         <Row className="mb-4 text-center">
           <Col>
             <h1 className="fw-bold text-primary">TestForge<span className="text-dark"> Engine</span></h1>
@@ -92,7 +109,6 @@ function App() {
         </Row>
 
         <Row className="g-4">
-          {/* Left Column: Input Area */}
           <Col lg={4}>
             <Card className="shadow-sm border-0 h-100">
               <Card.Header className="bg-white border-0 pt-4 pb-0">
@@ -111,7 +127,6 @@ function App() {
                   />
                 </Form.Group>
                 
-                {/* USP 3 Button: Analyze PRD */}
                 <Button 
                   variant="outline-dark" 
                   className="w-100 py-2 fw-bold mb-2" 
@@ -123,7 +138,6 @@ function App() {
                   ) : "Analyze PRD Readiness (Shift-Left)"}
                 </Button>
 
-                {/* Generate Button */}
                 <Button 
                   variant="primary" 
                   className="w-100 py-2 fw-bold" 
@@ -140,10 +154,7 @@ function App() {
             </Card>
           </Col>
 
-          {/* Right Column: Output Dashboard */}
           <Col lg={8}>
-            
-            {/* NEW: USP 3 Readiness Report Card */}
             {scoreData && (
               <Card className="shadow-sm border-0 mb-4 border-start border-4 border-info">
                 <Card.Body>
@@ -177,7 +188,6 @@ function App() {
               </Card>
             )}
 
-            {/* Traceability Matrix Card */}
             <Card className="shadow-sm border-0 bg-white" style={{ minHeight: '400px' }}>
               <Card.Header className="bg-white border-bottom-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
                 <h5 className="fw-bold mb-0">2. Traceability Matrix</h5>
@@ -205,7 +215,14 @@ function App() {
 
                 {results && (
                   <>
-                    <div className="d-flex justify-content-end mb-3">
+                    <div className="d-flex justify-content-end gap-2 mb-3">
+                      <Button variant="outline-success" size="sm" onClick={downloadPythonScript} disabled={generatingCode}>
+                        {generatingCode ? (
+                          <><Spinner as="span" animation="border" size="sm" className="me-1"/> Compiling Code...</>
+                        ) : (
+                          <>Download Selenium Script (.py)</>
+                        )}
+                      </Button>
                       <Button variant="outline-dark" size="sm" onClick={downloadCSV}>
                         Export CSV for Jira
                       </Button>
