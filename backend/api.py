@@ -160,7 +160,8 @@ async def generate_automation_code(request: CodeGenerationRequest):
     - Return STRICTLY the raw Python code. 
     - Do NOT wrap the code in markdown blocks (e.g., no ```python).
     - Do NOT include any explanations or conversational text.
-    - Include standard boilerplate (imports, webdriver setup in a pytest fixture).
+    - KEEP IT DRY: Put the WebDriver setup AND the generic login steps inside the `@pytest.fixture` so you do not repeat login code in every test.
+    - Keep test functions concise and focused only on the specific requirement.
 
     Test Cases:
     {json.dumps(request.test_data)}
@@ -170,6 +171,7 @@ async def generate_automation_code(request: CodeGenerationRequest):
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.1-8b-instant",
             temperature=0.1,
+            max_tokens=4000 # <--- THIS FIXES THE TRUNCATION
         )
         # Clean any accidental markdown formatting just in case
         raw_code = response.choices[0].message.content
