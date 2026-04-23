@@ -187,13 +187,13 @@ async def generate_flow(request: PRDRequest):
     prompt = f"""
     Analyze this PRD and extract the core user journey or system architecture flow.
     Generate a visual dependency graph using STRICT Mermaid.js syntax.
-    Start with 'graph TD'.
-    Use concise node names.
     
-    CRITICAL INSTRUCTIONS:
-    - Return STRICTLY the raw Mermaid syntax.
-    - Do NOT wrap the output in markdown blocks.
-    - Do NOT include any conversational text.
+    CRITICAL MERMAID INSTRUCTIONS:
+    1. Start strictly with 'graph TD'.
+    2. Node IDs must be simple letters (e.g., A, B, C).
+    3. Node labels MUST be enclosed in brackets and double quotes (e.g., A["User Logs In"] --> B["Dashboard"]).
+    4. Do NOT use parentheses () or single quotes inside the labels.
+    5. Return STRICTLY the raw Mermaid syntax. Do NOT wrap the output in markdown blocks (no ```mermaid).
     
     PRD: {request.text}
     """
@@ -205,6 +205,7 @@ async def generate_flow(request: PRDRequest):
             max_tokens=1000
         )
         raw_syntax = response.choices[0].message.content
+        # Double-check strip to remove any rogue markdown formatting
         clean_syntax = raw_syntax.replace("```mermaid", "").replace("```", "").strip()
         
         return {"flowchart": clean_syntax}
