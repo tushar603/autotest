@@ -319,7 +319,7 @@ function App() {
                       <Col md={4}>
                           <Button variant="primary" className="w-100 py-3 fw-bold shadow-sm rounded-3 d-flex align-items-center justify-content-center" onClick={handleGenerate} disabled={loading || scoring || generatingFlow || !prdText}>
                             {loading ? <Spinner as="span" animation="border" size="sm" className="me-2"/> : <i className="bi bi-magic me-2 fs-5"></i>}
-                            Orchestrate Pipeline
+                            Generate Test Cases
                           </Button>
                       </Col>
                   </Row>
