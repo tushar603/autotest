@@ -7,7 +7,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginUsername, setLoginUsername] = useState('vit_faculty');
+  const [loginUsername, setLoginUsername] = useState('tushar');
   const [loginPassword, setLoginPassword] = useState('password123');
 
   const [prdText, setPrdText] = useState('');
@@ -378,7 +378,7 @@ function App() {
             <Col lg={11} ref={matrixRef}>
               <Card className="shadow-lg border-0 rounded-4 overflow-hidden" style={{ minHeight: '500px' }}>
                 <Card.Header className="bg-white border-bottom pt-4 pb-3 d-flex justify-content-between align-items-center">
-                  <h5 className="fw-bold mb-0 text-dark"><i className="bi bi-table me-2 text-secondary"></i>2. AI-Generated Traceability Matrix</h5>
+                  <h5 className="fw-bold mb-0 text-dark"><i className="bi bi-table me-2 text-secondary"></i>2. AI-Generated Test Case Matrix</h5>
                   {provider && (
                     <Badge bg={provider === "Local Cache" ? "secondary" : "success"} className="px-3 py-2 rounded-pill fw-medium shadow-sm">
                       <i className="bi bi-database-fill-check me-2"></i>Active LLM: {provider}
@@ -390,8 +390,8 @@ function App() {
                   {!results && !loading && (
                     <div className="text-muted text-center py-5">
                       <i className="bi bi-cloud-slash display-1 mb-3 d-block opacity-25"></i>
-                      <h5 className="fw-medium">Pipeline Standby</h5>
-                      <p className="small">Awaiting input specs to orchestrate cascade.</p>
+                      <h5 className="fw-medium">Output Window</h5>
+                      <p className="small">Waiting for input specs to generate testcases.</p>
                     </div>
                   )}
 
@@ -489,7 +489,7 @@ function App() {
       </Modal>
 
       <footer className="text-center py-4 mt-5 text-secondary small border-top bg-white">
-        VIT Pune - Final Year Project - B.Tech Computer Engineering - Awaiting Model Orchestra Cascade
+        &copy; 2026 TestForge. All rights reserved.
       </footer>
     </div>
   );
