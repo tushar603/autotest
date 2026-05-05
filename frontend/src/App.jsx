@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { Analytics } from '@vercel/analytics/react';
 import { Container, Row, Col, Form, Button, Card, Spinner, Badge, Table, ListGroup, Navbar, Nav, NavDropdown, Modal, InputGroup } from 'react-bootstrap';
 import mermaid from 'mermaid';
 
@@ -487,7 +488,7 @@ function App() {
           <div className="text-center mt-3 small text-muted">A valid faculty or student ID required. Mock credentials enabled for presentation.</div>
         </Modal.Body>
       </Modal>
-
+        <Analytics />
       <footer className="text-center py-4 mt-5 text-secondary small border-top bg-white">
         &copy; 2026 TestForge. All rights reserved.
       </footer>
