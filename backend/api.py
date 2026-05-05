@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from groq import Groq
+from mistralai import Mistral 
 
 load_dotenv()
 
@@ -32,6 +33,7 @@ app.add_middleware(
 
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+mistral_client = Mistral(api_key=os.getenv("MISTRAL_API_KEY")) 
 
 class PRDRequest(BaseModel):
     text: str
@@ -60,6 +62,15 @@ def generate_with_groq(prompt: str):
         temperature=0.2,
     )
     return clean_json_response(response.choices[0].message.content)
+
+def generate_with_mistral(prompt: str):
+    print("[TestForge] Attempting with Mistral (Tier 3 Free Failover)...")
+    response = mistral_client.chat.complete(
+        model="mistral-large-latest",
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"}
+    )
+    return json.loads(response.choices[0].message.content)
 
 def generate_mock_data():
     print("[TestForge] APIs unavailable. Triggering Demo Mode Fallback...")
@@ -132,7 +143,9 @@ async def process_prd(request: PRDRequest):
     except Exception as e:
         telemetry["gemini_failures"] += 1
         print(f"[WARNING] Gemini Failed: {str(e)}")
-        
+    
+    
+
     try:
         data = generate_with_groq(prompt)
         telemetry["groq_success"] += 1
@@ -140,6 +153,12 @@ async def process_prd(request: PRDRequest):
     except Exception as e:
         telemetry["groq_failures"] += 1
         print(f"[WARNING] Groq Failed: {str(e)}")
+
+    try:
+        data = generate_with_mistral(prompt)
+        return {"status": "success", "provider": "Mistral AI", "data": data}
+    except Exception as e:
+        print(f"[WARNING] Mistral Failed: {str(e)}")
 
     try:
         data = generate_mock_data()
